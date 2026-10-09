@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Amazon Prime Sales Analysis | Interactive Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--bg:#061321;--panel:#0b1b2c;--line:#24435c;--blue:#08a5ff;--text:#f3f7fc;--muted:#9db3c9;--yellow:#ffc83d;--pink:#f72585}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#061321,#071a2b);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text)}
+header{display:flex;justify-content:space-between;align-items:center;padding:22px 28px;border-bottom:1px solid var(--line);gap:18px;flex-wrap:wrap}
+.brand{font-size:22px;font-weight:800;letter-spacing:-.5px}.brand span{color:var(--blue)}.subtitle{color:var(--muted);font-size:13px;margin-top:6px}
+.wrap{display:grid;grid-template-columns:245px 1fr;gap:16px;padding:16px}
+.panel{background:rgba(11,27,44,.95);border:1px solid var(--line);border-radius:13px;padding:16px;box-shadow:0 8px 24px #0002}
+h2{font-size:15px;margin:0 0 14px}label{display:block;color:var(--muted);font-size:12px;margin:15px 0 6px}
+select,button{width:100%;background:#10263a;color:var(--text);border:1px solid #49647b;border-radius:7px;padding:10px;font-size:13px}
+button{cursor:pointer;background:#087fc5;border:0;font-weight:700;margin-top:12px}button:hover{background:#079ee9}
+.hint{color:var(--muted);font-size:11px;line-height:1.5;margin-top:16px}
+main{min-width:0}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.kpi{position:relative;overflow:hidden}.kpi small{color:var(--muted)}.kpi strong{display:block;font-size:clamp(25px,3vw,39px);margin:8px 0}.spark{height:3px;background:linear-gradient(90deg,var(--blue),transparent);border-radius:4px}
+.charts{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-top:14px}.chartbox{height:300px}.bottom{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.bottom .chartbox{height:270px}
+canvas{max-width:100%}.foot{padding:0 18px 20px;color:var(--muted);font-size:11px}
+@media(max-width:850px){.wrap{grid-template-columns:1fr}.kpis{grid-template-columns:1fr}.charts,.bottom{grid-template-columns:1fr}.chartbox{height:260px}}
+</style>
+</head>
+<body>
+<header><div><div class="brand">amazon <span>prime</span>　|　SALES ANALYSIS</div><div class="subtitle">Movie insights · trends · content analysis</div></div><div class="subtitle">Interactive portfolio demo · Saabiq</div></header>
+<div class="wrap">
+<aside class="panel">
+<h2>FILTERS</h2>
+<label for="type">Movie type / rating</label><select id="type"><option value="All">All ratings</option><option>CC</option><option>R</option><option>PG-13</option><option>PG</option><option>TV-14</option><option>TV-MA</option><option>TV-PG</option><option>NR</option></select>
+<label for="year">Release period</label><select id="year"><option value="All">All years</option><option value="Early">2010–2014</option><option value="Middle">2015–2019</option><option value="Recent">2020–2023</option></select>
+<label for="quality">Quality</label><select id="quality"><option value="All">All formats</option><option>Prime Video</option><option>Blu ray</option><option>DVD</option><option>4K</option><option>Multi Format</option></select>
+<button id="reset">Reset filters</button>
+<div class="hint">This is a standalone interactive demo using illustrative sample data based on the dashboard screenshot. It is not connected to a live Amazon or Power BI dataset.</div>
+</aside>
+<main>
+<div class="kpis">
+<div class="panel kpi"><small>Total Sales (Price)</small><strong id="sales">$0K</strong><div class="spark"></div></div>
+<div class="panel kpi"><small>Total Movies</small><strong id="movies">0</strong><div class="spark" style="background:linear-gradient(90deg,#b46bff,transparent)"></div></div>
+<div class="panel kpi"><small>Total Reviews</small><strong id="reviews">0M</strong><div class="spark" style="background:linear-gradient(90deg,#00d4aa,transparent)"></div></div>
+</div>
+<div class="charts">
+<div class="panel chartbox"><h2>Count of Movies by Release Year</h2><canvas id="yearChart"></canvas></div>
+<div class="panel chartbox"><h2>Total Sales by Movie Type</h2><canvas id="typeChart"></canvas></div>
+</div>
+<div class="bottom">
+<div class="panel chartbox"><h2>Total Sales by Quality</h2><canvas id="qualityChart"></canvas></div>
+<div class="panel chartbox"><h2>Total Sales by Product Description</h2><canvas id="productChart"></canvas></div>
+</div>
+</main>
+</div>
+<div class="foot">Portfolio demo · Use filters to explore how KPI cards and charts update together.</div>
+<script>
+const labels=[2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023];
+const release=[161,190,200,271,254,245,315,370,345,332,420,541,355,320];
+const types=['CC','R','PG-13','PG','TV-14','TV-MA','TV-PG','NR'];
+const sales=[30,21,13,7,4,3,2,2];
+const qualityLabels=['Prime Video','Blu ray','DVD','4K','Multi Format'];
+const qualityVals=[68,9,9,1,0.5];
+const products=["God's Co...","The Inum...","Haunted ...","Mystery ...","Chucky 7...","Leprecha..."];
+const productVals=[8.4,7.9,0.2,0.2,0.2,0.1];
+Chart.defaults.color='#d9e7f4';Chart.defaults.font.family='Segoe UI,Arial,sans-serif';
+const grid='#20394f';
+let yearChart,typeChart,qualityChart,productChart;
+const base={responsive:true,maintainAspectRatio:false,animation:{duration:650},plugins:{legend:{display:false}},scales:{x:{grid:{color:grid}},y:{grid:{color:grid},beginAtZero:true}}};
+function makeCharts(){
+ yearChart=new Chart(document.getElementById('yearChart'),{type:'line',data:{labels,datasets:[{data:release,borderColor:'#08a5ff',backgroundColor:'rgba(8,165,255,.18)',fill:true,tension:.25,pointRadius:3}]},options:{...base}});
+ typeChart=new Chart(document.getElementById('typeChart'),{type:'bar',data:{labels:types,datasets:[{data:sales,backgroundColor:'#ffc83d',borderRadius:3}]},options:{...base,indexAxis:'y'}});
+ qualityChart=new Chart(document.getElementById('qualityChart'),{type:'doughnut',data:{labels:qualityLabels,datasets:[{data:qualityVals,backgroundColor:['#08a5ff','#164bff','#ff963d','#9a35ff','#f725b9'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right'}}}});
+ productChart=new Chart(document.getElementById('productChart'),{type:'bar',data:{labels:products,datasets:[{data:productVals,backgroundColor:'#ff5c51',borderRadius:3}]},options:{...base,indexAxis:'y'}});
+}
+function update(){
+ const typ=document.getElementById('type').value, yr=document.getElementById('year').value, q=document.getElementById('quality').value;
+ const typeFactor=typ==='All'?1:({CC:1,R:.7,'PG-13':.43,PG:.23,'TV-14':.13,'TV-MA':.1,'TV-PG':.07,NR:.06}[typ]||1);
+ const yearFactor=yr==='All'?1:yr==='Early'?.33:yr==='Middle'?.4:.27;
+ const qFactor=q==='All'?1:({'Prime Video':.78,'Blu ray':.1,DVD:.1,'4K':.01,'Multi Format':.01}[q]||1);
+ const factor=typeFactor*yearFactor*qFactor;
+ const targetSales=Math.round(87*factor), targetMovies=Math.max(1,Math.round(6000*factor)), targetReviews=Math.max(1,Math.round(30*factor));
+ animateNumber('sales',targetSales,'K','$'); animateNumber('movies',targetMovies.toLocaleString('en-US'),'',''); animateNumber('reviews',targetReviews,'M','');
+ const yrLabels=yr==='Early'?labels.slice(0,5):yr==='Middle'?labels.slice(5,10):yr==='Recent'?labels.slice(10):labels;
+ const yrVals=yr==='Early'?release.slice(0,5):yr==='Middle'?release.slice(5,10):yr==='Recent'?release.slice(10):release;
+ yearChart.data.labels=yrLabels; yearChart.data.datasets[0].data=yrVals.map(v=>Math.round(v*typeFactor*qFactor));yearChart.update();
+ typeChart.data.datasets[0].data=sales.map((v,i)=>Math.round(v*87*typeFactor*yearFactor*qFactor)/87);typeChart.update();
+ qualityChart.data.datasets[0].data=qualityVals.map(v=>v*(q==='All'?1:qualityLabels.includes(q)?(q===qualityLabels[qualityLabels.indexOf(q)]?1:.05):.05));qualityChart.update();
+ productChart.data.datasets[0].data=productVals.map(v=>+(v*typeFactor*yearFactor*qFactor).toFixed(2));productChart.update();
+}
+let anim={};
+function animateNumber(id,target,suffix,prefix){
+ const el=document.getElementById(id); let numeric=typeof target==='number'?target:parseInt(String(target).replace(/,/g,''))||0;
+ const start=performance.now(), duration=420;
+ function tick(now){const p=Math.min(1,(now-start)/duration), val=Math.round(numeric*(1-Math.pow(1-p,3)));
+   el.textContent=prefix+val.toLocaleString('en-US')+suffix;
+   if(p<1)requestAnimationFrame(tick);
+ }requestAnimationFrame(tick);
+}
+makeCharts();update();
+['type','year','quality'].forEach(id=>document.getElementById(id).addEventListener('change',update));
+document.getElementById('reset').addEventListener('click',()=>{['type','year','quality'].forEach(id=>document.getElementById(id).value='All');update();});
+</script>
+</body></html>
